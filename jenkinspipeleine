@@ -1,0 +1,43 @@
+pipeline {
+   agent none
+   options { skipDefaultCheckout() }
+   stages {    
+stage ('Running on Dev (Dev-CDP2-AHAelearning) Environment'){
+           when {
+               expression { params.Environment == 'Dev'}
+           }
+           agent {label 'Dev-CDP2-AHAelearning'}
+           steps{
+               checkout scm
+               sh 'ls -al'
+               sh 'rm -rf .git'
+               sh 'rm -rf public/saml'
+               sh 'rm -rf public/auth'  
+               sh 'rm -rf public/content'
+               sh 'rm -rf public/system'
+               sh 'rm -rf public/libs/mailgun'
+               sh 'rm -rf public/scorm_data'
+               sh 'rm -rf config/autoload/global.php'
+               sh 'rm -rf config/autoload/solr.local.php'
+               sh 'rm -rf public/index.php'
+               sh 'rm -rf vendor/DbHandler/src/DbHandler/config.ini'
+               sh 'rm -rf vendor/DbHandler/src/DbHandler/rptconfig.ini'
+                                               
+               // Checking the quality gate for passing metrics.
+               
+script{
+withSonarQubeEnv('SonarQube') {
+sh '/opt/sonar-scanner/bin/sonar-scanner -X'
+}
+sleep(100)
+timeout(time: 10, unit: 'MINUTES') {
+waitForQualityGate abortPipeline: true
+}
+}
+
+sh '/usr/bin/sh /srv/www/dev-ahaelearning.sh'
+               echo "Deploying on Dev Environment"
+           }
+       }          
+   }
+}
